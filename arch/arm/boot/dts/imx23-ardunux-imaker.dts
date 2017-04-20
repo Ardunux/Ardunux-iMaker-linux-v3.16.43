@@ -1,0 +1,175 @@
+/*
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ *
+ * Author: Fabio Estevam <fabio.estevam@freescale.com>
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include "imx23-ardunux-imaker.dtsi"
+
+/ {
+	model = "Ardunux iMaker iMX23";
+	compatible = "ardunux,imaker-imx23", "fsl,imx23";
+
+	memory {
+		reg = <0x40000000 0x04000000>;
+	};
+
+	apb@80000000 {
+		apbh@80000000 {
+			ssp0: ssp@80010000 {
+				compatible = "fsl,imx23-mmc";
+				pinctrl-names = "default";
+				pinctrl-0 = <&mmc0_4bit_pins_a &mmc0_pins_fixup>;
+				bus-width = <4>;
+				broken-cd;
+				status = "okay";
+			};
+
+			pinctrl@80018000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&hog_pins_a>;
+
+				hog_pins_a: hog@0 {
+					reg = <0>;
+					fsl,pinmux-ids = <
+						MX23_PAD_GPMI_CLE__GPIO_0_16
+					>;
+					fsl,drive-strength = <MXS_DRIVE_4mA>;
+					fsl,voltage = <MXS_VOLTAGE_HIGH>;
+					fsl,pull-up = <MXS_PULL_DISABLE>;
+				};
+
+				led_pins_user: led_pins_user@0 {
+					reg = <0>;
+					fsl,pinmux-ids = <
+						MX23_PAD_SSP1_DETECT__GPIO_2_1
+					>;
+					fsl,drive-strength = <MXS_DRIVE_4mA>;
+					fsl,voltage = <MXS_VOLTAGE_HIGH>;
+					fsl,pull-up = <MXS_PULL_DISABLE>;
+				};
+			};
+
+			ssp1: ssp@80034000 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "fsl,imx23-spi";
+				pinctrl-names = "default";
+				pinctrl-0 = <&spi2_pins_a>;
+				cs-gpios = <&gpio0 3 0>;
+				status = "okay";
+
+				spidev0: spidev@0 {
+					compatible = "spidev";
+					spi-max-frequency = <1000000>;
+					reg = <0>;
+				};
+			};
+		};
+
+		apbx@80040000 {
+          lradc: lradc@80050000 {
+				compatible = "fsl,imx23-lradc";
+				fsl,num-channels = <16>;
+
+				status = "okay";
+			};
+
+			i2c0: i2c@80058000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&i2c1_pins_a>;
+				status = "okay";
+			};
+
+          pwm2: pwm@80064000 {
+             pinctrl-names = "default";
+             pinctrl-0 = <&pwm2_pins_a>;
+             status = "okay";
+           };
+
+			duart: serial@80070000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&duart_pins_a>;
+				status = "okay";
+			};
+
+			auart0: serial@8006c000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&auart0_2pins_a>;
+				status = "okay";
+			};
+
+			usbphy0: usbphy@8007c000 {
+				status = "okay";
+			};
+
+          codec: mxs-builtin-codec {
+             compatible = "fsl,mxs-builtin-codec";
+             reg = <0x80048000 0x2000>, <0x8004c000 0x2000>, <0x8005c000 0x2000>;
+             reg-names = "audioout", "audioin", "rtc";
+             clocks = <&clks 31>;
+             clock-names = "filt";
+            };
+
+           platform_dai: mxs-builtin-cpu-dai {
+             compatible = "fsl,mxs-builtin-cpu-dai";
+             reg = <0x80048000 0x2000>, <0x8004c000 0x2000>, <0x8005c000 0x2000>;
+             reg-names = "audioout", "audioin", "rtc";
+             interrupts = <8 6 4>;
+             dmas = <&dma_apbx 0>, <&dma_apbx 1>;
+             dma-names = "rx", "tx";
+            };
+		};
+	};
+
+	ahb@80080000 {
+		usb0: usb@80080000 {
+			dr_mode = "host";
+			vbus-supply = <&reg_usb0_vbus>;
+			status = "okay";
+		};
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg_usb0_vbus: usb0_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb0_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			enable-active-high;
+			startup-delay-us = <0>;
+			gpio = <&gpio0 16 0>;
+		};
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_pins_user>;
+
+		user@0 {
+			label = "green";
+			gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "timer";
+		};
+	};
+
+    mxs-builtin-audio {
+        compatible = "fsl,mxs-builtin-audio";
+        audio-codec = <&codec>;
+        cpu-dai = <&platform_dai>;
+    };
+};

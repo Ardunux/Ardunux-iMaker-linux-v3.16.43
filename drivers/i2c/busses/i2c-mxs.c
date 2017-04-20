@@ -153,6 +153,8 @@ static int mxs_i2c_reset(struct mxs_i2c_dev *i2c)
 
 	writel(MXS_I2C_IRQ_MASK << 8, i2c->regs + MXS_I2C_CTRL1_SET);
 
+	dmaengine_terminate_all(i2c->dmach);
+
 	return 0;
 }
 
@@ -579,10 +581,14 @@ static int mxs_i2c_xfer_msg(struct i2c_adapter *adap, struct i2c_msg *msg,
 	 * 4 bytes of length. The write transfer is not limited as it can use
 	 * clock stretching to avoid FIFO underruns.
 	 */
+#ifdef CONFIG_SOC_IMX23
+		use_pio = 0;
+#else	/* CONFIG_SOC_IMX28 */
 	if ((msg->flags & I2C_M_RD) && (msg->len <= 4))
 		use_pio = 1;
 	if (!(msg->flags & I2C_M_RD) && (msg->len < 7))
 		use_pio = 1;
+#endif
 
 	i2c->cmd_err = 0;
 	if (use_pio) {
